@@ -21,6 +21,37 @@ import smtplib
 from email.mime.text import MIMEText
 import re
 
+# 查看更新的库
+import urllib.request
+import webbrowser
+
+__version__ = "2.2.0"
+
+
+# 查看更新
+def update():
+    try:
+        response = urllib.request.urlopen("https://0x22f1a6543a0.github.io/senderfile-api.html")
+    except:
+        msg.showwarning("不可用", "检查更新不可用")
+        return
+    newest_version = str(
+        response.read().decode("utf-8")
+    ).replace('\n', '').replace(' ', '')
+    if newest_version != __version__:
+        if msg.askyesno("提示", f"您当前不是最新版！"
+                                f"\n最新版："+newest_version+f" |  您当前为：{__version__}\n"
+                                f"是否下载最新版？\n\n"
+                                f"下载地址：https://wwvk.lanzouq.com/b043846zg\n"
+                                f"访问密码：cuv4\n\n"
+                                f"按下“是”将会自动跳转网页和复制密码"):
+            webbrowser.open("https://wwvk.lanzouq.com/b043846zg")
+            senderfile.clipboard_clear()
+            senderfile.clipboard_append("cuv4")
+
+
+threading.Thread(target=update).start()
+
 booker = """
 (中文版本)
 零. SenDerFile为程序(Program)，不是软件(software)
@@ -34,11 +65,13 @@ booker = """
 5、 在使用程序中的过程中如有发生信息泄露/黑客利用漏洞侵入个人计算机等事故由自己承担，不由开发者承担
 
 二. 程序收集个人隐私
+
 1、 本程序纯绿色，不存在收集隐私的行为
 2、 本程序不会访问/监听/窃取任何一个其他软件上交服务器
 3、 本程序不会监听任何硬件上交服务器！
 4、 本程序不会有中转服务器存在。SenDerFile为离线程序
 5、 本程序会有网络监听，任何网络监听行为均为正常且合理
+6、 本程序不会收集您输入的任何信息，包括但不限于邮箱、主机名
 
 三. 程序信息
 
@@ -63,6 +96,7 @@ SECOND. The Program collects personal privacy
 3. This program will not listen to any hardware submitted to the server!
 4. There will be no intermediary server in this program. SenDerFile is an offline program
 5. There will be network monitoring in this program, and any network monitoring behavior is normal and reasonable
+6. This program will not collect any you input information, include but not only e-mail and hostname
 
 THIRD. Procedural Information
 
@@ -311,7 +345,8 @@ class client:
                 server_address = listen_address
 
             if filename.decode() == "AliveAndScan":
-                senderfile.log_text.insert(tk.END, f"[DATA] 收到服务端的扫描请求，请求处理：{senderfile.username_entry.get()}\n", "data")
+                senderfile.log_text.insert(tk.END, f"[DATA] 收到服务端的扫描请求，"
+                                f"请求处理：{senderfile.username_entry.get()}\n", "data")
                 client.sendto(f"{senderfile.username_entry.get()}".encode("utf-8"), server_address)
                 if senderfile.license_radio.get() == "udp":
                     filename = client.recvfrom(56320)[0]
@@ -487,61 +522,73 @@ class function:
 
 class emali_send:
     def send(self):
-        from_message = senderfile.bug_text.get(0.0, tk.END)
-        from_email = senderfile.from_email_entry.get()
-        from_name = senderfile.from_bug_entry.get()
-        if from_email.strip() == "":
-            msg.showwarning("提示", "邮箱为必填项哦~")
-            return
-        else:
-            regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
-            if not re.fullmatch(regex, from_email):
-                msg.showerror("错误", "邮箱格式不正确！")
+        def sendtoemail():
+            senderfile.progressbar_bug['value'] = 0
+            r = random.randint(50, 79)
+            from_message = senderfile.bug_text.get(0.0, tk.END)
+            from_email = senderfile.from_email_entry.get()
+            from_name = senderfile.from_bug_entry.get()
+            if from_email.strip() == "":
+                msg.showwarning("提示", "邮箱为必填项哦~")
                 return
-        try:
-            # 发送邮件BUG
-            message = f"""
-            一封bug反馈邮件，内容：
-            {'-'*60}
-            {from_message}
-            {'-'*60}
-            反馈者签名：{from_name if from_name.strip() != "" else "是一位做好事不留名的好人呀~"}
-            """
-            server = smtplib.SMTP_SSL("", 9999)
-            server.login("", "")
-            machine_bug = MIMEText(message, "plain", "utf-8")
-            machine_bug['Subject'] = "SenDerFile BUG反馈接受到一个反馈"
-            machine_bug['From'] = ""
-            machine_bug["To"] = ','.join([""])
-            server.sendmail("",
-                            "",
-                            machine_bug.as_string())
-            # 发送感谢邮件
-            thanks_message = f"""
-            恭喜您成为SenDerFile 贡献者之一！
-            我们会尽快修复您描述的bug~
-            {'-'*60}
-            {from_message}
-            {'-'*60}
-            因为您的反馈，造就了我们的辉煌！
-            感谢您的bug反馈
-                                         ——SenDerFile开发者
-            """
-            machine_thanks = MIMEText(thanks_message, "plain", "utf-8")
-            machine_thanks['Subject'] = "SenDerFile 开发者感谢邮件"
-            machine_thanks['From'] = ""
-            machine_thanks["To"] = ','.join([f"{from_email}"])
-            server.sendmail("",
-                            f"{from_email}",
-                            machine_thanks.as_string())
-            server.quit()
-            msg.showinfo('发送完成', "您的bug反馈邮件已经发送到开发者的邮箱中！\n"
-                                     f"已经有一封感谢信发送到{from_email}中，谢谢您的bug反馈和支持！")
-        except smtplib.SMTPException as e:
-            msg.showerror("发送失败", "您的bug反馈邮件没有发送到开发者的邮箱中，\n"
-                                      "原因：\n"
-                                      f"{e}")
+            else:
+                regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
+                if not re.fullmatch(regex, from_email):
+                    msg.showerror("错误", "邮箱格式不正确！")
+                    return
+            for i in range(r):
+                senderfile.progressbar_bug['value'] = i
+                time.sleep(0.03)
+            try:
+                server = smtplib.SMTP_SSL("smtp.qq.com", 465)
+                server.login("", "")
+                # 发送感谢邮件
+                thanks_message = f"""
+                恭喜您成为 <SenDerFile> 贡献者之一！
+                我们会尽快修复您描述的bug~
+                {'-'*60}
+                {from_message}
+                {'-'*60}
+                感谢您的bug反馈
+                                             ——SenDerFile开发者
+                """
+                machine_thanks = MIMEText(thanks_message, "plain", "utf-8")
+                machine_thanks['Subject'] = "SenDerFile 开发者感谢邮件"
+                machine_thanks['From'] = ""
+                machine_thanks["To"] = ','.join([f"{from_email}"])
+                server.sendmail("",
+                                f"{from_email}",
+                                machine_thanks.as_string())
 
+                # 发送邮件BUG
+                message = f"""
+                一封bug反馈邮件，内容：
+                {'-'*60}
+                {from_message}
+                {'-'*60}
+                反馈者签名：{from_name if from_name.strip() != "" else "是一位做好事不留名的好人呀~"}
+                """
+                machine_bug = MIMEText(message, "plain", "utf-8")
+                machine_bug['Subject'] = "SenDerFile接受到一个bug反馈"
+                machine_bug['From'] = ""
+                machine_bug["To"] = ','.join([""])
+                server.sendmail("2953911716@qq.com",
+                                "2953911716@qq.com",
+                                machine_bug.as_string())
+                server.quit()
+                for i in range(101 - r):
+                    senderfile.progressbar_bug['value'] += 1
+                    time.sleep(0.04)
+                msg.showinfo('发送完成', "您的bug反馈邮件已经发送到开发者的邮箱中！\n"
+                                         f"已经有一封感谢信发送到{from_email}中，谢谢您的bug反馈和支持！")
+
+            except smtplib.SMTPException as e:
+                msg.showerror("发送失败", "您的bug反馈邮件没有发送到开发者的邮箱中，\n"
+                                          "原因：\n"
+                                          f"{e}")
+            senderfile.progressbar_bug['value'] = 0
+
+        threading.Thread(target=sendtoemail).start()
 
 
 class senderfile(tk.Tk):
@@ -572,7 +619,12 @@ class senderfile(tk.Tk):
         tk.Label(self.bugger_frame, text="发送者(签名)：").place(x=100, y=350)
         self.from_bug_entry = tk.Entry(self.bugger_frame, width=50)
         self.from_bug_entry.place(x=190, y=350)
-        tk.Button(self.bugger_frame, text="发送反馈", command=emali_send().send).place(x=600, y=400)
+        tk.Button(
+            self.bugger_frame,
+            text="发送反馈",
+            command=emali_send().send).place(x=600, y=400)
+        self.progressbar_bug = ttk.Progressbar(self.bugger_frame, maximum=100, value=0, length=650)
+        self.progressbar_bug.place(x=30, y=450)
         # 权限的UI
         self.agreed = Scrolledtext.ScrolledText(self.prime_frame, height=10)
         self.agreed.pack(fill=tk.BOTH)
