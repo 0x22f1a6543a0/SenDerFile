@@ -16,6 +16,11 @@ import tkinter.scrolledtext as Scrolledtext
 import tkinter.messagebox as msg
 import socket
 
+# Bug 反馈需要的库
+import smtplib
+from email.mime.text import MIMEText
+import re
+
 booker = """
 (中文版本)
 零. SenDerFile为程序(Program)，不是软件(software)
@@ -70,7 +75,7 @@ class ToolTip(tk.Toplevel):
     """
     一个气泡窗的方法
     """
-    def __init__(self, wdgt, msg=None, msgFunc=None, delay: float=1.0, follow=True):
+    def __init__(self, wdgt, msg=None, msgFunc=None, delay: float = 1.0, follow=True):
         self.wdgt = wdgt
         self.parent = self.wdgt.master
         tk.Toplevel.__init__(self, self.parent, bg='black', padx=1, pady=1)
@@ -78,7 +83,7 @@ class ToolTip(tk.Toplevel):
         self.overrideredirect(True)
 
         self.msgVar = tk.StringVar()
-        if msg == None:
+        if msg is None:
             self.msgVar.set('No message provided')
         else:
             self.msgVar.set(msg)
@@ -294,8 +299,7 @@ class client:
                 msg.showerror("错误", "你输入的端口不是纯数字\n有内鬼，终止交易")
                 return None
             client.bind(listen_address)
-            senderfile.log_text.insert(tk.END, f"[LISTENING] 开始监听， {listen_address}, 协议{senderfile.license_radio.get()}\n")
-            senderfile.log_text.config(fg="purple")
+            senderfile.log_text.insert(tk.END, f"[LISTENING] 开始监听， {listen_address}, 协议{senderfile.license_radio.get()}\n", "working")
             if senderfile.license_radio.get() == "tcp":
                 client.listen(5)
                 client, addr = client.accept()
@@ -307,6 +311,7 @@ class client:
                 server_address = listen_address
 
             if filename.decode() == "AliveAndScan":
+                senderfile.log_text.insert(tk.END, f"[DATA] 收到服务端的扫描请求，请求处理：{senderfile.username_entry.get()}\n", "data")
                 client.sendto(f"{senderfile.username_entry.get()}".encode("utf-8"), server_address)
                 if senderfile.license_radio.get() == "udp":
                     filename = client.recvfrom(56320)[0]
@@ -315,6 +320,7 @@ class client:
 
             if filename.decode() != "IsAlive":
                 if "sha" in str(filename.decode())[:7] or "md" in str(filename.decode())[:4]:
+                    senderfile.log_text.insert(tk.END, "[HASH] 服务端的信息中包含hash混淆！\n", "hash")
                     ver = True
                     verify = str(filename.decode()).split(":")[0]
                     value = str(filename.decode()).split(":")[-1]
@@ -324,6 +330,7 @@ class client:
                     f = open(filename, 'wb')
 
             else:
+                senderfile.log_text.insert(tk.END, "[DATA] 收到服务端的存活请求，请求处理：alive\n", "data")
                 if senderfile.license_radio.get() == "udp":
                     client.sendto("alive".encode("utf-8"), server_address)
                 else:
@@ -333,7 +340,6 @@ class client:
             # 初始化
             start = time.time()
             count = 0
-            senderfile.log_text.config(fg='orange')
             while True:
                 try:
                     if senderfile.license_radio.get() == "udp":
@@ -351,14 +357,13 @@ class client:
                         client.send(str(count * 56320).encode("utf-8"))
                     senderfile.log_text.insert(tk.END, f"[{time.strftime('%H:%M:%S')}]  "
                                 f"从：{server_address[0]}接收了{count * 56320}字节"
-                                f"， 耗时：{str(time.time()-start)[:4]}\n")
+                                f"， 耗时：{str(time.time()-start)[:4]}\n", "sending")
 
                 except:
                     break
                 senderfile.log_text.yview_moveto(True)
                 senderfile.log_text.update()
-            senderfile.log_text.config(fg="green")
-            senderfile.log_text.insert(tk.END, f"[{time.strftime('%H:%M:%S')}] 完成接收！总共耗时：{time.time()-start}\n")
+            senderfile.log_text.insert(tk.END, f"[{time.strftime('%H:%M:%S')}] 完成接收！总共耗时：{time.time()-start}\n", "finish")
             senderfile.log_text.yview_moveto(True)
             senderfile.log_text.update()
             client.close()
@@ -380,17 +385,31 @@ class client:
                     now_value = hashlib.md5(str(vf.read()).encode("utf-8")).hexdigest()
                 vf.close()
                 if now_value == value:
-                    senderfile.log_text.insert(tk.END, f"[verify] 校验{verify}成功\n原hash值：{value}\n当前hash值：{now_value}\n")
+                    senderfile.log_text.insert(tk.END, f"[verify] 校验{verify}成功\n原hash值：{value}\n当前hash值：{now_value}\n", "finish")
                 else:
                     os.remove(filename.decode("utf-8"))
-                    senderfile.log_text.insert(tk.END, f"[verify] 校验{verify}失败\n原hash值：{value}\n当前hash值：{now_value}\n")
-                    senderfile.log_text.config(fg="red")
-                    if msg.askyesno("Hash错误", f"校验的Hash值和接受Hash值不同！hash算法：{verify}\n校验hash: {value}\n接收hash：{now_value}\n请问是否继续？是：不进行操作，否：删除文件"):
+                    senderfile.log_text.insert(tk.END, f"[verify] 校验{verify}失败\n原hash值：{value}\n当前hash值：{now_value}\n", "error")
+                    if msg.askyesno("Hash错误", f"校验的Hash值和接受Hash值不同！hash算法：{verify}\n"
+                                                f"校验hash: {value}\n"
+                                                f"接收hash：{now_value}\n"
+                                                f"请问是否继续？是：不进行操作，否：删除文件"):
                         open(filename, 'wb').write(data)
                 senderfile.log_text.yview_moveto(True)
                 senderfile.log_text.update()
             return None
         threading.Thread(target=listen).start()
+
+
+class loggerOS:
+    def __init__(self):
+        senderfile.log_text.tag_configure("error", font=("宋体", 9, "bold"), foreground="red", background="black")
+        senderfile.log_text.tag_configure("warning", font=("宋体", 9, "bold"), foreground="orange")
+        senderfile.log_text.tag_configure("finish", font=("楷体", 9, "bold"), foreground="green")
+        senderfile.log_text.tag_configure("init", font=("华文楷体", 10), foreground="purple")
+        senderfile.log_text.tag_configure("working", font=("楷体", 10, "bold"), foreground="blue")
+        senderfile.log_text.tag_configure("sending", foreground="yellow")
+        senderfile.log_text.tag_configure("data", foreground="pink", font=("华文楷体", 12))
+        senderfile.log_text.tag_configure("hash", foreground="black")
 
 
 class function:
@@ -466,6 +485,65 @@ class function:
             msg.showerror("噗", "SDF好像被某种东方的神秘力量拦截了……?")
 
 
+class emali_send:
+    def send(self):
+        from_message = senderfile.bug_text.get(0.0, tk.END)
+        from_email = senderfile.from_email_entry.get()
+        from_name = senderfile.from_bug_entry.get()
+        if from_email.strip() == "":
+            msg.showwarning("提示", "邮箱为必填项哦~")
+            return
+        else:
+            regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
+            if not re.fullmatch(regex, from_email):
+                msg.showerror("错误", "邮箱格式不正确！")
+                return
+        try:
+            # 发送邮件BUG
+            message = f"""
+            一封bug反馈邮件，内容：
+            {'-'*60}
+            {from_message}
+            {'-'*60}
+            反馈者签名：{from_name if from_name.strip() != "" else "是一位做好事不留名的好人呀~"}
+            """
+            server = smtplib.SMTP_SSL("", 9999)
+            server.login("", "")
+            machine_bug = MIMEText(message, "plain", "utf-8")
+            machine_bug['Subject'] = "SenDerFile BUG反馈接受到一个反馈"
+            machine_bug['From'] = ""
+            machine_bug["To"] = ','.join([""])
+            server.sendmail("",
+                            "",
+                            machine_bug.as_string())
+            # 发送感谢邮件
+            thanks_message = f"""
+            恭喜您成为SenDerFile 贡献者之一！
+            我们会尽快修复您描述的bug~
+            {'-'*60}
+            {from_message}
+            {'-'*60}
+            因为您的反馈，造就了我们的辉煌！
+            感谢您的bug反馈
+                                         ——SenDerFile开发者
+            """
+            machine_thanks = MIMEText(thanks_message, "plain", "utf-8")
+            machine_thanks['Subject'] = "SenDerFile 开发者感谢邮件"
+            machine_thanks['From'] = ""
+            machine_thanks["To"] = ','.join([f"{from_email}"])
+            server.sendmail("",
+                            f"{from_email}",
+                            machine_thanks.as_string())
+            server.quit()
+            msg.showinfo('发送完成', "您的bug反馈邮件已经发送到开发者的邮箱中！\n"
+                                     f"已经有一封感谢信发送到{from_email}中，谢谢您的bug反馈和支持！")
+        except smtplib.SMTPException as e:
+            msg.showerror("发送失败", "您的bug反馈邮件没有发送到开发者的邮箱中，\n"
+                                      "原因：\n"
+                                      f"{e}")
+
+
+
 class senderfile(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -480,9 +558,21 @@ class senderfile(tk.Tk):
         self.send_frame = tk.Frame(self.notebook)
         self.accept_frame = tk.Frame(self.notebook)
         self.prime_frame = tk.Frame(self.notebook)
+        self.bugger_frame = tk.Frame(self.notebook)
         self.notebook.add(self.send_frame, text="发送")
         self.notebook.add(self.accept_frame, text="接受")
         self.notebook.add(self.prime_frame, text="身份")
+        self.notebook.add(self.bugger_frame, text="Bug反馈")
+        # BUG反馈
+        self.bug_text = Scrolledtext.ScrolledText(self.bugger_frame, font=("楷体", 10, "bold"))
+        self.bug_text.pack()
+        tk.Label(self.bugger_frame, text="发送者(邮箱)：*", fg="red").place(x=100, y=320)
+        self.from_email_entry = tk.Entry(self.bugger_frame, width=50)
+        self.from_email_entry.place(x=190, y=320)
+        tk.Label(self.bugger_frame, text="发送者(签名)：").place(x=100, y=350)
+        self.from_bug_entry = tk.Entry(self.bugger_frame, width=50)
+        self.from_bug_entry.place(x=190, y=350)
+        tk.Button(self.bugger_frame, text="发送反馈", command=emali_send().send).place(x=600, y=400)
         # 权限的UI
         self.agreed = Scrolledtext.ScrolledText(self.prime_frame, height=10)
         self.agreed.pack(fill=tk.BOTH)
@@ -511,8 +601,8 @@ class senderfile(tk.Tk):
 
         # 接受的UI
         # 日志栏
-        self.log_text = Scrolledtext.ScrolledText(self.accept_frame, width=95, height=30, fg='red')
-        self.log_text.insert(1.0, "[START] 程序正常打开\n")
+        self.log_text = Scrolledtext.ScrolledText(self.accept_frame, width=95, height=30, bg="skyblue")
+        self.log_text.insert(1.0, "[START] 程序正常打开\n", "init")
         self.log_text.place(x=0, y=0)
         # IP
         tk.Label(self.accept_frame, text="地址：").place(x=5, y=400)
@@ -597,8 +687,8 @@ class senderfile(tk.Tk):
             value=False
         )
         self.scanning_no_radio.place(x=160, y=65)
-        self.scanning_yes_radio.bind("<Button-1>", lambda event: self.show_disapper("show"))
-        self.scanning_no_radio.bind("<Button-1>", lambda event: self.show_disapper("disapper"))
+        self.scanning_yes_radio.bind("<Button-1>", lambda event: self.show_disappear("show"))
+        self.scanning_no_radio.bind("<Button-1>", lambda event: self.show_disappear("disappear"))
 
         # 选择器 -> 传输协议
         self.license_radio = tk.StringVar()
@@ -716,8 +806,8 @@ class senderfile(tk.Tk):
             "<<ListboxSelect>>",
             lambda event: self.finish_check()
         )
-        self.log_text.insert(2.0, "[INIT] 初始化完成\n")
-        self.log_text.insert(3.0, f"{'-'*90}\n[LICENSE] GNU General Public License v3\n{'-'*90}\n")
+        self.log_text.insert(2.0, "[INIT] 初始化完成\n", "init")
+        self.log_text.insert(3.0, f"{'-'*90}\n[LICENSE] GNU General Public License v3\n{'-'*90}\n", "init")
 
     def random_pwd(self):
         self.password_entry.delete(0, tk.END)
@@ -740,8 +830,8 @@ class senderfile(tk.Tk):
         self.ver_pwd_entry.config(state=tk.NORMAL)
         self.ver_send_button.config(state=tk.NORMAL)
 
-    def show_disapper(self, type_):
-        if type_ == "disapper":
+    def show_disappear(self, type_):
+        if type_ == "disappear":
             self.scanning_frame.place_forget()
             self.geometry("700x550")
             self.account_listbox.place_forget()
@@ -763,6 +853,8 @@ class senderfile(tk.Tk):
 
 
 senderfile = senderfile()
+loggerOS = loggerOS()
+
 server = server()
 client = client()
 function = function()
