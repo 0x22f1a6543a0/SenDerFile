@@ -18,6 +18,9 @@
 > > 3. time 时间库
 > > 4. threading 多线程库
 > > 5. socket 通信库
+> > 6. hashlib hash混淆库
+> > 7. string 字符串库
+> > 8. random 随机库
 
 ## 程序支持 program supported
 <font color="yellow">传输协议支持</font>
@@ -43,6 +46,10 @@
 > > - 用户自主选择使用什么协议
 > 4. 安全性
 > > - 程序没有对数据进行加密/泄露/上传别的服务器
+> 5. 身份验证
+> > - 可以对传输对象的身份进行验证，防止传输对象出错
+> 6. hash验证
+> > - 保证数据安全性
 
 ### <font color="red"> 开源精神 open-source mind
 > 开源并不以为着免费拿给人去使用、修改 </br>
