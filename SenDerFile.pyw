@@ -3,17 +3,29 @@
 License: GNU General Public License v3
 Source URL: https://github.com/0x22f1a6543a0/SenDerFile
 """
+# 其他组合库
 import hashlib
-import os
 import random
 import string
+# 系统库
+import platform
+import sys
+import os
+# 线程库
 import threading
 import time
-import tkinter as tk
-import tkinter.ttk as ttk
-import tkinter.filedialog as filedialog
-import tkinter.scrolledtext as Scrolledtext
-import tkinter.messagebox as msg
+
+try:
+    import tkinter as tk
+    import tkinter.ttk as ttk
+    import tkinter.filedialog as filedialog
+    import tkinter.scrolledtext as Scrolledtext
+    import tkinter.messagebox as msg
+except ImportError:
+    print("SenDerFile 错误： TKINTER无法导入\n"
+          "如果您是Linux用户，则需要在中终端中输入：sudo apt-get install python-tk\n"
+          "其他系统(Windows)建议重新安装Python3")
+    sys.exit(0)
 import socket
 
 # Bug 反馈需要的库
@@ -25,32 +37,65 @@ import re
 import urllib.request
 import webbrowser
 
-__version__ = "2.2.0"
+if "mac" in str(platform.system()).lower() or "dar" in str(platform.system()).lower():
+    msg.showerror("SDF 系统不兼容", "SDF 检测到您的系统：MacOS\n"
+                                   f"标识符：{platform.system()}\n"
+                                   "SenDerFile无法对您的系统兼容，请谅解！")
+    sys.exit(0)
+elif "lin" in str(platform.system()).lower():
+    system = "linux"
+
+else:
+    system = "windows"
+__version__ = "2.3.8"
 
 
 # 查看更新
-def update():
+def update(return_=False):
     try:
         response = urllib.request.urlopen("https://0x22f1a6543a0.github.io/senderfile-api.html")
-    except:
-        msg.showwarning("不可用", "检查更新不可用")
+    except Exception as e:
+        if return_:
+            msg.showwarning("不可用", f"检查更新不可用\n原因：{e}")
         return
     newest_version = str(
         response.read().decode("utf-8")
     ).replace('\n', '').replace(' ', '')
     if newest_version != __version__:
-        if msg.askyesno("提示", f"您当前不是最新版！"
-                                f"\n最新版："+newest_version+f" |  您当前为：{__version__}\n"
-                                f"是否下载最新版？\n\n"
-                                f"下载地址：https://wwvk.lanzouq.com/b043846zg\n"
-                                f"访问密码：cuv4\n\n"
-                                f"按下“是”将会自动跳转网页和复制密码"):
-            webbrowser.open("https://wwvk.lanzouq.com/b043846zg")
-            senderfile.clipboard_clear()
-            senderfile.clipboard_append("cuv4")
+        if (int(newest_version.replace(".", '')) >
+                int(__version__.replace(".", ""))):
+            if msg.askyesno("提示", f"您当前不是最新版！"
+                                    f"\n最新版："+newest_version+f" |  您当前为：{__version__}\n"
+                                    f"是否下载最新版？\n\n"
+                                    f"下载地址：https://wwvk.lanzouq.com/b043846zg\n"
+                                    f"访问密码：cuv4\n\n"
+                                    f"按下“是”将会自动跳转网页和复制密码"):
+                webbrowser.open("https://wwvk.lanzouq.com/b043846zg")
+                senderfile.clipboard_clear()
+                senderfile.clipboard_append("cuv4")
+        else:
+            msg.showwarning("嗯？", f"你确定你的版本是{__version__}？\n"
+                                   f"怎么比匹配的最大版本{newest_version}还大？")
+    else:
+        if return_:
+            msg.showinfo("恭喜", "你的SenDerFile客户端为最新版！")
 
 
-threading.Thread(target=update).start()
+def e():
+    senderfile.notice_text.config(state=tk.NORMAL)
+    try:
+        notice = urllib.request.urlopen("https://0x22f1a6543a0.github.io/senderfile-notice.html")
+    except Exception as e:
+        senderfile.notice_text.delete(1.0, tk.END)
+        senderfile.notice_text.config(fg='red')
+        senderfile.notice_text.insert(tk.END, f"公告不可用！原因：{e}")
+        senderfile.notice_text.config(state=tk.DISABLED)
+        return
+    senderfile.notice_text.config(fg="green", font=("楷体", 10, "bold"))
+    senderfile.notice_text.delete(1.0, tk.END)
+    senderfile.notice_text.insert(tk.END, notice.read().decode("utf-8"))
+    senderfile.notice_text.config(state=tk.DISABLED)
+
 
 booker = """
 (中文版本)
@@ -63,6 +108,7 @@ booker = """
 3、 密码变动为纯随机，如果出现令您感到不适的词汇纯属巧合！
 4、 hash校验算法为hashlib (Python™)提供
 5、 在使用程序中的过程中如有发生信息泄露/黑客利用漏洞侵入个人计算机等事故由自己承担，不由开发者承担
+6、 更新检查服务器均来自：https://github.com
 
 二. 程序收集个人隐私
 
@@ -541,7 +587,7 @@ class emali_send:
                 time.sleep(0.03)
             try:
                 server = smtplib.SMTP_SSL("smtp.qq.com", 465)
-                server.login("", "")
+                server.login("2953911716@qq.com", "fkfntfznupjmdhbe")
                 # 发送感谢邮件
                 thanks_message = f"""
                 恭喜您成为 <SenDerFile> 贡献者之一！
@@ -554,9 +600,9 @@ class emali_send:
                 """
                 machine_thanks = MIMEText(thanks_message, "plain", "utf-8")
                 machine_thanks['Subject'] = "SenDerFile 开发者感谢邮件"
-                machine_thanks['From'] = ""
+                machine_thanks['From'] = "2953911716@qq.com"
                 machine_thanks["To"] = ','.join([f"{from_email}"])
-                server.sendmail("",
+                server.sendmail("2953911716@qq.com",
                                 f"{from_email}",
                                 machine_thanks.as_string())
 
@@ -570,8 +616,8 @@ class emali_send:
                 """
                 machine_bug = MIMEText(message, "plain", "utf-8")
                 machine_bug['Subject'] = "SenDerFile接受到一个bug反馈"
-                machine_bug['From'] = ""
-                machine_bug["To"] = ','.join([""])
+                machine_bug['From'] = "2953911716@qq.com"
+                machine_bug["To"] = ','.join(["2953911716@qq.com"])
                 server.sendmail("2953911716@qq.com",
                                 "2953911716@qq.com",
                                 machine_bug.as_string())
@@ -606,12 +652,35 @@ class senderfile(tk.Tk):
         self.accept_frame = tk.Frame(self.notebook)
         self.prime_frame = tk.Frame(self.notebook)
         self.bugger_frame = tk.Frame(self.notebook)
+        self.other_frame = tk.Frame(self.notebook)
         self.notebook.add(self.send_frame, text="发送")
         self.notebook.add(self.accept_frame, text="接受")
-        self.notebook.add(self.prime_frame, text="身份")
+        self.notebook.add(self.prime_frame, text="验证")
         self.notebook.add(self.bugger_frame, text="Bug反馈")
+        self.notebook.add(self.other_frame, text="其他")
+        # 其他
+        tk.Label(self.other_frame, text="公告：").pack()
+        if system != "linux":
+            self.notice_text = Scrolledtext.ScrolledText(self.other_frame, state=tk.DISABLED)
+        else:
+            self.notice_text = Scrolledtext.ScrolledText(self.other_frame, state=tk.DISABLED, height=15)
+        self.notice_text.pack()
+        tk.Button(
+            self.other_frame,
+            text="刷新告示",
+            command=lambda: threading.Thread(target=e).start()
+        ).place(x=600, y=400)
+        tk.Button(
+            self.other_frame,
+            text="检查更新",
+            command=lambda: threading.Thread(target=lambda: update(True)).start()
+        ).place(x=600, y=450)
         # BUG反馈
-        self.bug_text = Scrolledtext.ScrolledText(self.bugger_frame, font=("楷体", 10, "bold"))
+        if system != "linux":
+            self.bug_text = Scrolledtext.ScrolledText(self.bugger_frame, font=("楷体", 10, "bold"))
+        else:
+            self.bug_text = Scrolledtext.ScrolledText(self.bugger_frame, font=("楷体", 10, "bold"),
+                height=15)
         self.bug_text.pack()
         tk.Label(self.bugger_frame, text="发送者(邮箱)：*", fg="red").place(x=100, y=320)
         self.from_email_entry = tk.Entry(self.bugger_frame, width=50)
@@ -640,20 +709,30 @@ class senderfile(tk.Tk):
                                       "1、在同频段下的IP扫描的身份验证，-\n"
                                       " 防止优先IP被访问；防止传输对象错误")
         # 用户名设置
-        tk.Label(self.prime_frame, text="用户名*：", fg="orange").place(x=100, y=200)
         self.username_entry = tk.Entry(self.prime_frame, width=40, font=("微软雅黑", 9, "bold"))
         self.username_entry.insert(0, str(socket.gethostname()))
-        self.username_entry.place(x=170, y=200)
         # 密码设置
-        tk.Label(self.prime_frame, text="密码*：", fg="red").place(x=100, y=235)
         self.password_entry = tk.Entry(self.prime_frame, width=40, font=("微软雅黑", 9, "bold"))
         self.random_pwd()
-        self.password_entry.place(x=170, y=235)
-        tk.Button(self.prime_frame, text="随机生成", command=self.random_pwd).place(x=480, y=235)
+        if system != "linux":
+            tk.Label(self.prime_frame, text="用户名*：", fg="orange").place(x=100, y=200)
+            tk.Label(self.prime_frame, text="密码*：", fg="red").place(x=100, y=235)
+            tk.Button(self.prime_frame, text="随机生成", command=self.random_pwd).place(x=480, y=235)
+            self.password_entry.place(x=170, y=235)
+            self.username_entry.place(x=170, y=200)
+        else:
+            tk.Label(self.prime_frame, text="用户名*：", fg="orange").place(x=100, y=250)
+            tk.Label(self.prime_frame, text="密码*：", fg="red").place(x=100, y=285)
+            tk.Button(self.prime_frame, text="随机生成", command=self.random_pwd).place(x=480, y=285)
+            self.password_entry.place(x=170, y=285)
+            self.username_entry.place(x=170, y=250)
 
         # 接受的UI
         # 日志栏
-        self.log_text = Scrolledtext.ScrolledText(self.accept_frame, width=95, height=30, bg="skyblue")
+        if system != "linux":
+            self.log_text = Scrolledtext.ScrolledText(self.accept_frame, width=95, height=30, bg="skyblue")
+        else:
+            self.log_text = Scrolledtext.ScrolledText(self.accept_frame, width=95, height=22, bg="skyblue")
         self.log_text.insert(1.0, "[START] 程序正常打开\n", "init")
         self.log_text.place(x=0, y=0)
         # IP
@@ -784,7 +863,10 @@ class senderfile(tk.Tk):
         self.public_radio.place(x=10, y=80)
 
         self.notebook.pack(fill=tk.BOTH, expand=True)
-        self.protocol("WM_DELETE_WINDOW", lambda: os.system(f"taskkill /F /PID {os.getpid()}"))
+        if system != "linux":
+            self.protocol("WM_DELETE_WINDOW", lambda: os.system(f"taskkill /F /PID {os.getpid()}"))
+        else:
+            self.protocol("WM_DELETE_WINDOW", lambda: os.system(f"kill {os.getpid()}"))
         # 输入框 -> 传输地址
         # 本地
         self.localhost_entry = tk.Entry(self.broker_frame)
@@ -808,19 +890,28 @@ class senderfile(tk.Tk):
         tk.Label(self.file_frame, text="进度").place(x=5, y=50)
         self.progressbar = ttk.Progressbar(self.file_frame, length=600, maximum=100, value=100)
         self.progressbar.place(x=40, y=50)
-
-        self.filename_entry = tk.Entry(self.file_frame, width=65)
+        if system != "linux":
+            self.filename_entry = tk.Entry(self.file_frame, width=65)
+        else:
+            self.filename_entry = tk.Entry(self.file_frame, width=55)
         self.filename_entry.place(x=100, y=0)
         tk.Label(self.file_frame, text="[*]文件目录：", fg="red").place(x=10, y=0)
-        tk.Button(self.file_frame, text="选择文件",
-                  command=lambda: function.select_file(self.filename_entry)).place(x=580, y=0)
+        if system != "linux":
+            tk.Button(self.file_frame, text="选择文件",
+                    command=lambda: function.select_file(self.filename_entry)).place(x=580, y=0)
+        else:
+            tk.Button(self.file_frame, text="选择文件",
+                    command=lambda: function.select_file(self.filename_entry)).place(x=560, y=0)
         self.send_button = tk.Button(self.file_frame, text="传输", fg="green",
                   command=lambda: server.send(self.filename_entry.get(),
                                               self.progressbar,
                                               self.broker_radio,
                                               self.port_entry.get(),
                                               "normal"))
-        self.send_button.place(x=600, y=90)
+        if system != "linux":
+            self.send_button.place(x=600, y=90)
+        else:
+            self.send_button.place(x=590, y=90)
 
         # 其他
         self.progress = tk.Label(self.file_frame, text="未启动", justify=tk.LEFT)
@@ -844,12 +935,16 @@ class senderfile(tk.Tk):
                                         self.port_entry.get(),
                                         "send")
         )
-        self.ver_send_button.place(x=600, y=60)
-
+        if system != "linux":
+            self.ver_send_button.place(x=600, y=60)
+        else:
+            self.ver_send_button.place(x=590, y=60)
         # 加载身份验证器
         self.Scrollbar = ttk.Scrollbar(self.send_frame)
-
-        self.account_listbox = tk.Listbox(self.send_frame, width=43, height=25, yscrollcommand=self.Scrollbar.set)
+        if system != "linux":
+            self.account_listbox = tk.Listbox(self.send_frame, width=43, height=25, yscrollcommand=self.Scrollbar.set)
+        else:
+            self.account_listbox = tk.Listbox(self.send_frame, width=38, height=20, yscrollcommand=self.Scrollbar.set)
         self.title_account_label = tk.Label(
             self.send_frame,
             text="查找到的身份列表",
@@ -904,8 +999,10 @@ class senderfile(tk.Tk):
             self.Scrollbar.pack(fill=tk.BOTH, side=tk.RIGHT)
 
 
+threading.Thread(target=update).start()
 senderfile = senderfile()
 loggerOS = loggerOS()
+threading.Thread(target=e).start()
 
 server = server()
 client = client()
