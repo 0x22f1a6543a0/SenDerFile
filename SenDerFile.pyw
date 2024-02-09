@@ -22,6 +22,9 @@ except ImportError:
           "其他系统(Windows)建议重新安装Python3")
 import socket
 
+# 异步处理
+import asyncio
+
 # 系统库
 import platform
 import sys
@@ -257,10 +260,14 @@ class server:
                     client_addresses.append((ip, int(p)))
 
         def sendto(client_addresses, progressbar, path, server, type_):
-            # 启动线程过一遍检查
-            check_threading = threading.Thread(target=function.check, args=(progressbar, client_addresses, server, type_))
-            check_threading.start()
-            check_threading.join()
+            asyncio.set_event_loop(asyncio.new_event_loop())
+            loop = asyncio.get_event_loop()
+            check_task = loop.create_task(check(progressbar, client_addresses, server, type_))
+            loop.run_until_complete(check_task)
+            loop.close()
+            index = check_task.result()
+            if index == -1:
+                return None
             if not senderfile.scanning_radio.get() or type_ == "send":
                 # 地址初始化
                 server.settimeout(30)
@@ -269,12 +276,12 @@ class server:
                     if broker.get() == "LAN":
                         addr = []
                         for i in range(len(port)):
-                            addr.append(client_addresses[255 * i + function.index])
+                            addr.append(client_addresses[255 * i + index])
                 if senderfile.license_radio.get() == "tcp":
                     if len(addr) >= 2:
                         msg.showerror("错误", "TCP协议不支持多地址传输，请使用UDP")
                     else:
-                        server.connect(client_addresses[function.index])
+                        server.connect(client_addresses[index])
                 start = time.time()
                 # 校验数据
                 if senderfile.verify_radio.get():
@@ -375,7 +382,11 @@ class client:
             except:
                 msg.showerror("错误", "你输入的端口不是纯数字\n有内鬼，终止交易")
                 return None
-            client.bind(listen_address)
+            try:
+                client.bind(listen_address)
+            except OSError:
+                senderfile.log_text.insert(tk.END, f"[WARNING] {listen_address}已经被使用或不是一个正确的地址\n", "warning")
+                return
             senderfile.log_text.insert(tk.END, f"[LISTENING] 开始监听， {listen_address}, 协议{senderfile.license_radio.get()}\n", "working")
             if senderfile.license_radio.get() == "tcp":
                 client.listen(5)
@@ -481,7 +492,7 @@ class client:
 class loggerOS:
     def __init__(self):
         senderfile.log_text.tag_configure("error", font=("宋体", 9, "bold"), foreground="red", background="black")
-        senderfile.log_text.tag_configure("warning", font=("宋体", 9, "bold"), foreground="orange")
+        senderfile.log_text.tag_configure("warning", font=("宋体", 10, "bold"), foreground="yellow")
         senderfile.log_text.tag_configure("finish", font=("楷体", 9, "bold"), foreground="green")
         senderfile.log_text.tag_configure("init", font=("华文楷体", 10), foreground="purple")
         senderfile.log_text.tag_configure("working", font=("楷体", 10, "bold"), foreground="blue")
@@ -490,56 +501,55 @@ class loggerOS:
         senderfile.log_text.tag_configure("hash", foreground="black")
 
 
-class function:
-    def __init__(self):
-        self.index = 0
-
-    def check(self, progressbar, address, socket_, type_="normal"):
-        self.__init__()
-        if senderfile.scanning_radio.get():
-            senderfile.account_listbox.delete(0, tk.END)
-        progressbar['maximum'] = len(address)
-        senderfile.progress.place(x=450, y=80)
-        if len(address) > 1:
-            for i in range(len(address) - 1):
-                try:
-                    socket_.settimeout(float(senderfile.timeout_entry.get()))
-                except:
-                    msg.showerror("嗯？", "你输入的超时时间不正确，\n有内鬼！终止交易！")
-                    return None
-                try:
-                    senderfile.progress.place(x=100, y=80)
-                    senderfile.progress.config(
-                        text=f"正在尝试{address[i]}，进度："
-                        f"{address.index(address[i])}/{len(address) * len(senderfile.port_entry.get().split(';'))}"
-                    )
-                    progressbar['value'] = i
-                    if not senderfile.scanning_radio.get():
-                        socket_.sendto("IsAlive".encode("utf-8"), address[i])
-                    else:
-                        socket_.sendto("AliveAndScan".encode("utf-8"), address[i])
-                    r = str(socket_.recvfrom(1024)[0].decode())
-                    if r:
-                        senderfile.public_entry.delete(0, tk.END)
-                        senderfile.public_entry.insert(0, address[i][0])
-                        self.index = i
-                        if not senderfile.scanning_radio.get() or type_ == "send":
-                            break
-                        else:
-                            senderfile.account_listbox.insert(tk.END, f"{address[i]} - {r}")
-                except:
-                    pass
-            else:
-                if not senderfile.scanning_radio.get() or type_ == "send":
-                    msg.showwarning("哎呀", "没有找到任何一个发布在你提供的地址上的IP")
+async def check(progressbar, address, socket_, type_="normal"):
+    index = -1
+    if senderfile.scanning_radio.get():
+        senderfile.account_listbox.delete(0, tk.END)
+    progressbar['maximum'] = len(address)
+    senderfile.progress.place(x=450, y=80)
+    if len(address) > 1:
+        for i in range(len(address) - 1):
+            try:
+                socket_.settimeout(float(senderfile.timeout_entry.get()))
+            except:
+                msg.showerror("嗯？", "你输入的超时时间不正确，\n有内鬼！终止交易！")
+                return None
+            try:
+                senderfile.progress.place(x=100, y=80)
+                senderfile.progress.config(
+                    text=f"正在尝试{address[i]}，进度："
+                    f"{address.index(address[i])}/{len(address) * len(senderfile.port_entry.get().split(';'))}"
+                )
+                progressbar['value'] = i
+                if not senderfile.scanning_radio.get():
+                    socket_.sendto("IsAlive".encode("utf-8"), address[i])
                 else:
-                    msg.showinfo("完成", "扫描完成，所有存在的IP均在列表框中")
-        if not senderfile.scanning_radio.get() or type_ == "send":
-            progressbar['value'] = len(address)
+                    socket_.sendto("AliveAndScan".encode("utf-8"), address[i])
+                r = str(socket_.recvfrom(1024)[0].decode())
+                if r:
+                    senderfile.public_entry.delete(0, tk.END)
+                    senderfile.public_entry.insert(0, address[i][0])
+                    index = i
+                    if not senderfile.scanning_radio.get() or type_ == "send":
+                        break
+                    else:
+                        senderfile.account_listbox.insert(tk.END, f"{address[i]} - {r}")
+            except:
+                pass
         else:
-            progressbar['value'] = 0
-            senderfile.progress.config(text=f"检索完成")
+            if not senderfile.scanning_radio.get() or type_ == "send":
+                msg.showwarning("哎呀", "没有找到任何一个发布在你提供的地址上的IP")
+            else:
+                msg.showinfo("完成", "扫描完成，所有存在的IP均在列表框中")
+    if not senderfile.scanning_radio.get() or type_ == "send":
+        progressbar['value'] = len(address)
+    else:
+        progressbar['value'] = 0
+        senderfile.progress.config(text=f"检索完成")
+    return index
 
+
+class function:
     @staticmethod
     def get_file(path):
         filepath, tempfilename = os.path.split(path)
@@ -651,7 +661,7 @@ class senderfile(tk.Tk):
         self.ip = socket.gethostbyname(socket.gethostname())
         self.tk.call('tk', 'scaling', 1.3)
         self.geometry("700x550+300+100")
-        self.title(f"SenDerFile -F {os.getcwd()}")
+        self.title(f"SenDerFile -V {__version__} -F {os.getcwd()}")
 
         # 选项卡
         self.notebook = ttk.Notebook(self)
@@ -795,9 +805,11 @@ class senderfile(tk.Tk):
             state=tk.DISABLED)
         self.verify_license.set("md5")
         self.verify_license.place(x=200, y=35)
+
         def change(event):
             self.verify_license.config(state=tk.NORMAL)
             self.verify_license.config(state="readonly")
+
         self.verify_yes_radio.bind("<Button-1>", change)
         self.verify_no_radio.bind("<Button-1>", lambda event: self.verify_license.config(state=tk.DISABLED))
 
@@ -955,7 +967,11 @@ class senderfile(tk.Tk):
         self.log_text.insert(2.0, "[INIT] 初始化完成\n", "init")
         self.log_text.insert(3.0, f"{'-'*90}\n[LICENSE] GNU General Public License v3\n{'-'*90}\n", "init")
 
-        self.bind("<Key>", self.keyboard)
+        # 绑定快捷键
+        self.bind("<Control-Up>", self.key_up)
+        self.bind("<Control-Down>", self.key_down)
+        self.bind("<Control-Right>", self.key_left)
+        self.bind("<Control-Left>", self.key_right)
         self.bind("<Control-u>", lambda event: self.license_radio.set("udp"))
         self.bind("<Control-t>", lambda event: self.license_radio.set("tcp"))
         self.bind("<Control-s>", lambda event: function.select_file(self.filename_entry))
@@ -964,32 +980,33 @@ class senderfile(tk.Tk):
         self.notebook.pack(fill=tk.BOTH, expand=True)
         self.network_notebook.pack(fill=tk.BOTH, expand=True)
 
-    def keyboard(self, event):
-        keycode = int(event.keycode)
-        if keycode == 111:
-            if self.broker_radio.get() == "LOCAL":
-                self.broker_radio.set("PUBLIC")
-            elif self.broker_radio.get() == "LAN":
-                self.broker_radio.set("LOCAL")
-            else:
-                self.broker_radio.set("LAN")
-        elif keycode == 116:
-            if self.broker_radio.get() == "LOCAL":
-                self.broker_radio.set("LAN")
-            elif self.broker_radio.get() == "LAN":
-                self.broker_radio.set("PUBLIC")
-            else:
-                self.broker_radio.set("LOCAL")
-        elif keycode == 113:
-            self.notebook_count -= 1
-            if self.notebook_count < 0:
-                self.notebook_count = 3
-            self.notebook.select(self.notebook_count)
-        elif keycode == 114:
-            self.notebook_count += 1
-            if self.notebook_count > 3:
-                self.notebook_count = 0
-            self.notebook.select(self.notebook_count)
+    def key_up(self, event):
+        if self.broker_radio.get() == "LOCAL":
+            self.broker_radio.set("PUBLIC")
+        elif self.broker_radio.get() == "LAN":
+            self.broker_radio.set("LOCAL")
+        else:
+            self.broker_radio.set("LAN")
+
+    def key_down(self, event):
+        if self.broker_radio.get() == "LOCAL":
+            self.broker_radio.set("LAN")
+        elif self.broker_radio.get() == "LAN":
+            self.broker_radio.set("PUBLIC")
+        else:
+            self.broker_radio.set("LOCAL")
+
+    def key_right(self, event):
+        self.notebook_count -= 1
+        if self.notebook_count < 0:
+            self.notebook_count = 3
+        self.notebook.select(self.notebook_count)
+
+    def key_left(self, event):
+        self.notebook_count += 1
+        if self.notebook_count > 3:
+            self.notebook_count = 0
+        self.notebook.select(self.notebook_count)
 
     def finish_check(self):
         user = '-'.join(str(
