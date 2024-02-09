@@ -39,7 +39,7 @@ if "mac" in str(platform.system()).lower() or "dar" in str(platform.system()).lo
     system = "mac"
 elif "lin" in str(platform.system()).lower():
     system = "linux"
-__version__ = "2.3.8"
+__version__ = "2.4.0"
 
 
 # 查看更新
