@@ -3,30 +3,28 @@
 License: GNU General Public License v3
 Source URL: https://github.com/0x22f1a6543a0/SenDerFile
 """
-# 其他组合库
 import hashlib
+import os
 import random
 import string
-# 系统库
-import platform
-import sys
-import os
-# 线程库
 import threading
 import time
-
 try:
     import tkinter as tk
     import tkinter.ttk as ttk
     import tkinter.filedialog as filedialog
     import tkinter.scrolledtext as Scrolledtext
     import tkinter.messagebox as msg
+
 except ImportError:
     print("SenDerFile 错误： TKINTER无法导入\n"
           "如果您是Linux用户，则需要在中终端中输入：sudo apt-get install python-tk\n"
           "其他系统(Windows)建议重新安装Python3")
-    sys.exit(0)
 import socket
+
+# 系统库
+import platform
+import sys
 
 # Bug 反馈需要的库
 import smtplib
@@ -38,15 +36,9 @@ import urllib.request
 import webbrowser
 
 if "mac" in str(platform.system()).lower() or "dar" in str(platform.system()).lower():
-    msg.showerror("SDF 系统不兼容", "SDF 检测到您的系统：MacOS\n"
-                                   f"标识符：{platform.system()}\n"
-                                   "SenDerFile无法对您的系统兼容，请谅解！")
-    sys.exit(0)
+    system = "mac"
 elif "lin" in str(platform.system()).lower():
     system = "linux"
-
-else:
-    system = "windows"
 __version__ = "2.3.8"
 
 
@@ -61,18 +53,27 @@ def update(return_=False):
     newest_version = str(
         response.read().decode("utf-8")
     ).replace('\n', '').replace(' ', '')
+    if system == "linux":
+        url = "https://wwt.lanzouq.com/b0439ijwb"
+        pwd = "dyu7"
+    elif system == "mac":
+        url = "未收录MacOS"
+        pwd = "未收录MacOS"
+    else:
+        url = "https://wwvk.lanzouq.com/b043846zg"
+        pwd = "cuv4"
     if newest_version != __version__:
         if (int(newest_version.replace(".", '')) >
                 int(__version__.replace(".", ""))):
             if msg.askyesno("提示", f"您当前不是最新版！"
                                     f"\n最新版："+newest_version+f" |  您当前为：{__version__}\n"
                                     f"是否下载最新版？\n\n"
-                                    f"下载地址：https://wwvk.lanzouq.com/b043846zg\n"
-                                    f"访问密码：cuv4\n\n"
+                                    f"下载地址：{url}\n"
+                                    f"访问密码：{pwd}\n\n"
                                     f"按下“是”将会自动跳转网页和复制密码"):
-                webbrowser.open("https://wwvk.lanzouq.com/b043846zg")
+                webbrowser.open(url)
                 senderfile.clipboard_clear()
-                senderfile.clipboard_append("cuv4")
+                senderfile.clipboard_append(pwd)
         else:
             msg.showwarning("嗯？", f"你确定你的版本是{__version__}？\n"
                                    f"怎么比匹配的最大版本{newest_version}还大？")
@@ -97,27 +98,26 @@ def e():
     senderfile.notice_text.config(state=tk.DISABLED)
 
 
+threading.Thread(target=update).start()
+
 booker = """
 (中文版本)
-零. SenDerFile为程序(Program)，不是软件(software)
+零. SenDerFile为程序(Program)，不是软件(Software)
 
 一. 安全问题/免责声明
 
-1、 权限设置只是用作对方发送时的校验信息，不用作登录信息；且为了安全每次打开密码会变动
-2、 用户名为您的主机名
-3、 密码变动为纯随机，如果出现令您感到不适的词汇纯属巧合！
-4、 hash校验算法为hashlib (Python™)提供
-5、 在使用程序中的过程中如有发生信息泄露/黑客利用漏洞侵入个人计算机等事故由自己承担，不由开发者承担
-6、 更新检查服务器均来自：https://github.com
+1、 用户名为您的主机名
+2、 hash校验算法为hashlib (Python™)提供
+3、 在使用程序中的过程中如有发生信息泄露/黑客利用漏洞侵入个人计算机等事故由自己承担，不由开发者承担
+4、 更新检查服务器均来自：https://github.com
 
 二. 程序收集个人隐私
 
 1、 本程序纯绿色，不存在收集隐私的行为
 2、 本程序不会访问/监听/窃取任何一个其他软件上交服务器
 3、 本程序不会监听任何硬件上交服务器！
-4、 本程序不会有中转服务器存在。SenDerFile为离线程序
+4、 本程序不会有中转服务器存在。SenDerFile为半离线程序
 5、 本程序会有网络监听，任何网络监听行为均为正常且合理
-6、 本程序不会收集您输入的任何信息，包括但不限于邮箱、主机名
 
 三. 程序信息
 
@@ -125,16 +125,15 @@ booker = """
 2、 本程序开源地址：https://github.com/0x22f1a6543a0/SenDerFile
 
 
-(English Version; Translation by Microsoft NewBing)
-ZERO. SenDerFile is a program, not software
+(English Version; Translation by Microsoft Bing)
+ZERO. SenDerFile is a program, not Software
 
 FIRST. Security Issues/Disclaimers
 
-1. The permission setting is only used as the verification information when the other party sends, not as the login information; And for security reasons, the password will change every time you open it
-2. The username is your hostname
-3. The password change is purely random, if there are words that make you feel uncomfortable, it is purely coincidental!
-4. The hash verification algorithm is provided for hashlib (Python™).
-5. In the process of using the program, if there is any information leakage/hacker exploiting vulnerabilities to invade the personal computer, etc., FOR IT BY YOURSELF, NOT FOR THE DEVELOPER
+1. The username is your hostname
+2. The hash verification algorithm is provided for hashlib (Python™).
+3. In the process of using the program, if there is any information leakage/hacker exploiting vulnerabilities to invade the personal computer, etc., FOR IT BY YOURSELF, NOT FOR THE DEVELOPER
+4. Check update server is from https://github.com
 
 SECOND. The Program collects personal privacy
 1. This program is pure green, and there is no collection of privacy
@@ -142,7 +141,6 @@ SECOND. The Program collects personal privacy
 3. This program will not listen to any hardware submitted to the server!
 4. There will be no intermediary server in this program. SenDerFile is an offline program
 5. There will be network monitoring in this program, and any network monitoring behavior is normal and reasonable
-6. This program will not collect any you input information, include but not only e-mail and hostname
 
 THIRD. Procedural Information
 
@@ -160,8 +158,10 @@ class ToolTip(tk.Toplevel):
         self.parent = self.wdgt.master
         tk.Toplevel.__init__(self, self.parent, bg='black', padx=1, pady=1)
         self.withdraw()
-        self.overrideredirect(True)
-
+        try:
+            self.overrideredirect(True)
+        except:
+            pass
         self.msgVar = tk.StringVar()
         if msg is None:
             self.msgVar.set('No message provided')
@@ -258,12 +258,9 @@ class server:
 
         def sendto(client_addresses, progressbar, path, server, type_):
             # 启动线程过一遍检查
-            # 甚至需要单独开一个线程去堵另一个线程的运行……
-            threading.Thread(target=lambda: function.check(progressbar, client_addresses, server, type_)).start()
-            # 等待检查结束（不开两个线程会导致未响应）
-            while True:
-                if function.ischeck:
-                    break
+            check_threading = threading.Thread(target=function.check, args=(progressbar, client_addresses, server, type_))
+            check_threading.start()
+            check_threading.join()
             if not senderfile.scanning_radio.get() or type_ == "send":
                 # 地址初始化
                 server.settimeout(30)
@@ -355,12 +352,12 @@ class server:
         if senderfile.duo_radio.get():
             if senderfile.broker_radio.get() != "LAN":
                 for addr in client_addresses:
-                    threading.Thread(target=lambda: sendto([addr], progressbar, path, server, type_)).start()
+                    threading.Thread(target=sendto, args=([addr], progressbar, path, server, type_)).start()
             else:
                 msg.showerror("错误", "SDF不支持局域网ip模式下的并发传输")
                 return None
         else:
-            threading.Thread(target=lambda: sendto(client_addresses, progressbar, path, server, type_)).start()
+            threading.Thread(target=sendto, args=(client_addresses, progressbar, path, server, type_)).start()
 
 
 class client:
@@ -496,9 +493,11 @@ class loggerOS:
 class function:
     def __init__(self):
         self.index = 0
-        self.ischeck = False
 
     def check(self, progressbar, address, socket_, type_="normal"):
+        self.__init__()
+        if senderfile.scanning_radio.get():
+            senderfile.account_listbox.delete(0, tk.END)
         progressbar['maximum'] = len(address)
         senderfile.progress.place(x=450, y=80)
         if len(address) > 1:
@@ -510,7 +509,10 @@ class function:
                     return None
                 try:
                     senderfile.progress.place(x=100, y=80)
-                    senderfile.progress.config(text=f"正在尝试{address[i]}")
+                    senderfile.progress.config(
+                        text=f"正在尝试{address[i]}，进度："
+                        f"{address.index(address[i])}/{len(address) * len(senderfile.port_entry.get().split(';'))}"
+                    )
                     progressbar['value'] = i
                     if not senderfile.scanning_radio.get():
                         socket_.sendto("IsAlive".encode("utf-8"), address[i])
@@ -537,9 +539,6 @@ class function:
         else:
             progressbar['value'] = 0
             senderfile.progress.config(text=f"检索完成")
-        self.ischeck = True
-        time.sleep(0.2)
-        self.__init__()
 
     @staticmethod
     def get_file(path):
@@ -574,6 +573,13 @@ class emali_send:
             from_message = senderfile.bug_text.get(0.0, tk.END)
             from_email = senderfile.from_email_entry.get()
             from_name = senderfile.from_bug_entry.get()
+            if not str(from_message.strip()).replace(" ", ""):
+                msg.showerror("错误", "BUG反馈内容不可为空！")
+                return None
+            else:
+                if len(from_message) <= 10:
+                    msg.showwarning("警告", "bug反馈的内容长度小于10")
+                    return None
             if from_email.strip() == "":
                 msg.showwarning("提示", "邮箱为必填项哦~")
                 return
@@ -640,6 +646,7 @@ class emali_send:
 class senderfile(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.notebook_count = 0
         self.function = function()
         self.ip = socket.gethostbyname(socket.gethostname())
         self.tk.call('tk', 'scaling', 1.3)
@@ -651,13 +658,17 @@ class senderfile(tk.Tk):
         self.send_frame = tk.Frame(self.notebook)
         self.accept_frame = tk.Frame(self.notebook)
         self.prime_frame = tk.Frame(self.notebook)
-        self.bugger_frame = tk.Frame(self.notebook)
-        self.other_frame = tk.Frame(self.notebook)
+
+        self.network_frame = tk.Frame(self.notebook)
+        self.network_notebook = ttk.Notebook(self.network_frame)
+        self.bugger_frame = tk.Frame(self.network_notebook)
+        self.other_frame = tk.Frame(self.network_notebook)
         self.notebook.add(self.send_frame, text="发送")
         self.notebook.add(self.accept_frame, text="接受")
         self.notebook.add(self.prime_frame, text="验证")
-        self.notebook.add(self.bugger_frame, text="Bug反馈")
-        self.notebook.add(self.other_frame, text="其他")
+        self.notebook.add(self.network_frame, text="网络相关")
+        self.network_notebook.add(self.bugger_frame, text="Bug反馈")
+        self.network_notebook.add(self.other_frame, text="其他")
         # 其他
         tk.Label(self.other_frame, text="公告：").pack()
         if system != "linux":
@@ -711,20 +722,11 @@ class senderfile(tk.Tk):
         # 用户名设置
         self.username_entry = tk.Entry(self.prime_frame, width=40, font=("微软雅黑", 9, "bold"))
         self.username_entry.insert(0, str(socket.gethostname()))
-        # 密码设置
-        self.password_entry = tk.Entry(self.prime_frame, width=40, font=("微软雅黑", 9, "bold"))
-        self.random_pwd()
         if system != "linux":
             tk.Label(self.prime_frame, text="用户名*：", fg="orange").place(x=100, y=200)
-            tk.Label(self.prime_frame, text="密码*：", fg="red").place(x=100, y=235)
-            tk.Button(self.prime_frame, text="随机生成", command=self.random_pwd).place(x=480, y=235)
-            self.password_entry.place(x=170, y=235)
             self.username_entry.place(x=170, y=200)
         else:
             tk.Label(self.prime_frame, text="用户名*：", fg="orange").place(x=100, y=250)
-            tk.Label(self.prime_frame, text="密码*：", fg="red").place(x=100, y=285)
-            tk.Button(self.prime_frame, text="随机生成", command=self.random_pwd).place(x=480, y=285)
-            self.password_entry.place(x=170, y=285)
             self.username_entry.place(x=170, y=250)
 
         # 接受的UI
@@ -793,7 +795,10 @@ class senderfile(tk.Tk):
             state=tk.DISABLED)
         self.verify_license.set("md5")
         self.verify_license.place(x=200, y=35)
-        self.verify_yes_radio.bind("<Button-1>", lambda event: self.verify_license.config(state=tk.NORMAL))
+        def change(event):
+            self.verify_license.config(state=tk.NORMAL)
+            self.verify_license.config(state="readonly")
+        self.verify_yes_radio.bind("<Button-1>", change)
         self.verify_no_radio.bind("<Button-1>", lambda event: self.verify_license.config(state=tk.DISABLED))
 
         self.target = tk.Label(self.setting_frame, text="目标身份验证")
@@ -862,7 +867,6 @@ class senderfile(tk.Tk):
                                            variable=self.broker_radio, value="PUBLIC")
         self.public_radio.place(x=10, y=80)
 
-        self.notebook.pack(fill=tk.BOTH, expand=True)
         if system != "linux":
             self.protocol("WM_DELETE_WINDOW", lambda: os.system(f"taskkill /F /PID {os.getpid()}"))
         else:
@@ -888,7 +892,7 @@ class senderfile(tk.Tk):
 
         # 文件 -> 文件
         tk.Label(self.file_frame, text="进度").place(x=5, y=50)
-        self.progressbar = ttk.Progressbar(self.file_frame, length=600, maximum=100, value=100)
+        self.progressbar = ttk.Progressbar(self.file_frame, length=600, maximum=100, value=100, cursor="spider")
         self.progressbar.place(x=40, y=50)
         if system != "linux":
             self.filename_entry = tk.Entry(self.file_frame, width=65)
@@ -917,14 +921,9 @@ class senderfile(tk.Tk):
         self.progress = tk.Label(self.file_frame, text="未启动", justify=tk.LEFT)
         self.progress.place(x=500, y=80)
         # 身份验证容器
-        self.pwd_label = tk.Label(self.scanning_frame, text="密码")
-        self.pwd_label.place(x=10, y=45)
-        ToolTip(self.pwd_label, msg="留空为仅传输")
         tk.Label(self.scanning_frame, text="用户").place(x=10, y=10)
         self.ver_user_entry = tk.Entry(self.scanning_frame, width=40, state=tk.DISABLED)
         self.ver_user_entry.place(x=60, y=10)
-        self.ver_pwd_entry = tk.Entry(self.scanning_frame, width=30, state=tk.DISABLED)
-        self.ver_pwd_entry.place(x=60, y=45)
         self.ver_send_button = tk.Button(
             self.scanning_frame,
             text="传输",
@@ -956,12 +955,41 @@ class senderfile(tk.Tk):
         self.log_text.insert(2.0, "[INIT] 初始化完成\n", "init")
         self.log_text.insert(3.0, f"{'-'*90}\n[LICENSE] GNU General Public License v3\n{'-'*90}\n", "init")
 
-    def random_pwd(self):
-        self.password_entry.delete(0, tk.END)
-        self.password_entry.insert(0, ''.join(
-            random.choices(
-                string.ascii_letters + string.digits, k=random.randint(5, 20))
-        ))
+        self.bind("<Key>", self.keyboard)
+        self.bind("<Control-u>", lambda event: self.license_radio.set("udp"))
+        self.bind("<Control-t>", lambda event: self.license_radio.set("tcp"))
+        self.bind("<Control-s>", lambda event: function.select_file(self.filename_entry))
+        self.bind("<Control-l>", lambda event: client.listen())
+
+        self.notebook.pack(fill=tk.BOTH, expand=True)
+        self.network_notebook.pack(fill=tk.BOTH, expand=True)
+
+    def keyboard(self, event):
+        keycode = int(event.keycode)
+        if keycode == 111:
+            if self.broker_radio.get() == "LOCAL":
+                self.broker_radio.set("PUBLIC")
+            elif self.broker_radio.get() == "LAN":
+                self.broker_radio.set("LOCAL")
+            else:
+                self.broker_radio.set("LAN")
+        elif keycode == 116:
+            if self.broker_radio.get() == "LOCAL":
+                self.broker_radio.set("LAN")
+            elif self.broker_radio.get() == "LAN":
+                self.broker_radio.set("PUBLIC")
+            else:
+                self.broker_radio.set("LOCAL")
+        elif keycode == 113:
+            self.notebook_count -= 1
+            if self.notebook_count < 0:
+                self.notebook_count = 3
+            self.notebook.select(self.notebook_count)
+        elif keycode == 114:
+            self.notebook_count += 1
+            if self.notebook_count > 3:
+                self.notebook_count = 0
+            self.notebook.select(self.notebook_count)
 
     def finish_check(self):
         user = '-'.join(str(
@@ -974,7 +1002,6 @@ class senderfile(tk.Tk):
         self.ver_user_entry.delete(0, tk.END)
         self.ver_user_entry.insert(0, f"{str(ip)};{str(user)}")
         self.ver_user_entry.config(state=tk.DISABLED)
-        self.ver_pwd_entry.config(state=tk.NORMAL)
         self.ver_send_button.config(state=tk.NORMAL)
 
     def show_disappear(self, type_):
@@ -999,7 +1026,6 @@ class senderfile(tk.Tk):
             self.Scrollbar.pack(fill=tk.BOTH, side=tk.RIGHT)
 
 
-threading.Thread(target=update).start()
 senderfile = senderfile()
 loggerOS = loggerOS()
 threading.Thread(target=e).start()
