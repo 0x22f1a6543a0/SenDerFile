@@ -7,8 +7,8 @@
 ## 程序介绍 program introduction
 > 1. <font color="cyan">本程序用来将文件发送给其他电脑（客户端） </br></br>
 > 2. 相比于市面上存在的文件发送软件(software)，这个程序的优势在于不需要连接服务器；换句话说也就是没有大厂的登陆账号，校园网下不用互联网访问发送文件…… </br></br>
-> 3. 部分现成软件没有的功能，如并发传输，自主选择传输协议，自拟报头格式，自定义加密算法/格式 </br></br>
-> 4. 可拓展性，可维护性！</font>
+> 3. 部分现成软件没有的功能，如并发传输，自主选择传输协议，加密算法/格式 </br></br>
+> 4. 跨平台，支持Windows, MacOS, Linux</br></br></font>
 
 ## 程序使用 program used
 > 编程语言：**<font color="cyan">Python</font>** \
@@ -21,6 +21,14 @@
 > > 6. hashlib hash混淆库
 > > 7. string 字符串库
 > > 8. random 随机库
+> > 9. asyncio 异步处理
+> > 10. sys 系统库
+> > 11. platform 系统库
+> > 12. smtplib SMTP服务库
+> > 13. email 电子邮箱格式处理库
+> > 14. re 正则匹配
+> > 15. urllib3 网页处理库
+> > 16. webbrowser 网页浏览器库
 
 ## 程序支持 program supported
 <font color="yellow">传输协议支持</font>
@@ -51,6 +59,8 @@
 > 6. hash验证
 > > - 保证数据安全性
 
-### <font color="red"> 开源精神 open-source mind
-> 开源并不以为着免费拿给人去使用、修改 </br>
-> 而是让更多技术大佬，社区贡献者一起维护代码！</font>
+## 程序不支持 program not supported
+> 1. 多语言/国际化支持
+> > 当前只支持`cn-zh`语言
+> 2. 完全开源性
+> > 程序存在部分隐私内容
