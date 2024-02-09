@@ -592,8 +592,8 @@ class emali_send:
                 senderfile.progressbar_bug['value'] = i
                 time.sleep(0.03)
             try:
-                server = smtplib.SMTP_SSL("smtp.qq.com", 465)
-                server.login("2953911716@qq.com", "fkfntfznupjmdhbe")
+                server = smtplib.SMTP_SSL("", )
+                server.login("", "")
                 # 发送感谢邮件
                 thanks_message = f"""
                 恭喜您成为 <SenDerFile> 贡献者之一！
@@ -606,9 +606,9 @@ class emali_send:
                 """
                 machine_thanks = MIMEText(thanks_message, "plain", "utf-8")
                 machine_thanks['Subject'] = "SenDerFile 开发者感谢邮件"
-                machine_thanks['From'] = "2953911716@qq.com"
+                machine_thanks['From'] = ""
                 machine_thanks["To"] = ','.join([f"{from_email}"])
-                server.sendmail("2953911716@qq.com",
+                server.sendmail("",
                                 f"{from_email}",
                                 machine_thanks.as_string())
 
@@ -622,10 +622,10 @@ class emali_send:
                 """
                 machine_bug = MIMEText(message, "plain", "utf-8")
                 machine_bug['Subject'] = "SenDerFile接受到一个bug反馈"
-                machine_bug['From'] = "2953911716@qq.com"
-                machine_bug["To"] = ','.join(["2953911716@qq.com"])
-                server.sendmail("2953911716@qq.com",
-                                "2953911716@qq.com",
+                machine_bug['From'] = ""
+                machine_bug["To"] = ','.join([""])
+                server.sendmail("",
+                                "",
                                 machine_bug.as_string())
                 server.quit()
                 for i in range(101 - r):
