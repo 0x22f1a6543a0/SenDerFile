@@ -4,9 +4,7 @@ License: GNU General Public License v3
 Source URL: https://github.com/0x22f1a6543a0/SenDerFile
 """
 import hashlib
-import os
 import random
-import string
 import threading
 import time
 try:
@@ -20,6 +18,7 @@ except ImportError:
     print("SenDerFile 错误： TKINTER无法导入\n"
           "如果您是Linux用户，则需要在中终端中输入：sudo apt-get install python-tk\n"
           "其他系统(Windows)建议重新安装Python3")
+    quit(0)
 import socket
 
 # 异步处理
@@ -27,7 +26,7 @@ import asyncio
 
 # 系统库
 import platform
-import sys
+import os
 
 # Bug 反馈需要的库
 import smtplib
@@ -42,6 +41,8 @@ if "mac" in str(platform.system()).lower() or "dar" in str(platform.system()).lo
     system = "mac"
 elif "lin" in str(platform.system()).lower():
     system = "linux"
+else:
+    system = "windows"
 __version__ = "2.4.2"
 
 
@@ -103,7 +104,7 @@ def e():
 
 threading.Thread(target=update).start()
 
-booker = """
+BOOKER = """
 (中文版本)
 零. SenDerFile为程序(Program)，不是软件(Software)
 
@@ -149,6 +150,45 @@ THIRD. Procedural Information
 
 1. This program uses the GNU General Public License v3 open source license, please abide by the requirements of the open source license
 2. Open source address of this program: https://github.com/0x22f1a6543a0/SenDerFile
+"""
+
+UPDATE_LOG = """
+----------------------------------------
+
+[ 2.4.8 ]
+
+1、 修复BUG
+2、 更新UI
+    · 将身份验证的列表框改成表格
+        > 增加了’设备系统‘
+        > 增加了’ID‘
+3、 新增更新日志历史记录
+
+----------------------------------------
+
+[ 2.4.3 ]
+
+1、 新增快捷键
+    · shift+enter  传输
+2、 修复Windows BUG
+
+----------------------------------------
+
+[ 2.4.2 ]
+
+1、 优化多线程
+2、 优化硬件占用
+3、 新增-V启动参数，显示当前程序版本
+4、 新增快捷键
+    · ctrl+↑   向上选择传输模式
+    · ctrl+↓   向下选择传输模式
+    · ctrl+←   切换到上一个选项卡
+    · ctrl+→   切换到下一个选项卡
+    · ctrl+s   选择文件
+    · ctrl+l   快速监听
+    · ctrl+u   切换到UDP传输协议
+    · ctrl+t   切换到TCP传输协议
+==========以下无更新日志记录===========
 """
 
 
@@ -212,7 +252,8 @@ class ToolTip(tk.Toplevel):
 
 
 class server:
-    def send(self, path, progressbar, broker, port, type_="normal"):
+    @staticmethod
+    def send(path, progressbar, broker, port, type_="normal"):
         # UDP初始化
         if senderfile.license_radio.get() == 'udp':
             server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -260,12 +301,14 @@ class server:
                     client_addresses.append((ip, int(p)))
 
         def sendto(client_addresses, progressbar, path, server, type_):
-            asyncio.set_event_loop(asyncio.new_event_loop())
-            loop = asyncio.get_event_loop()
-            check_task = loop.create_task(check(progressbar, client_addresses, server, type_))
-            loop.run_until_complete(check_task)
-            loop.close()
-            index = check_task.result()
+            index = 0
+            if type_ != "send":
+                asyncio.set_event_loop(asyncio.new_event_loop())
+                loop = asyncio.get_event_loop()
+                check_task = loop.create_task(check(progressbar, client_addresses, server, type_))
+                loop.run_until_complete(check_task)
+                loop.close()
+                index = check_task.result()
             if index == -1:
                 return None
             if not senderfile.scanning_radio.get() or type_ == "send":
@@ -400,8 +443,8 @@ class client:
 
             if filename.decode() == "AliveAndScan":
                 senderfile.log_text.insert(tk.END, f"[DATA] 收到服务端的扫描请求，"
-                                f"请求处理：{senderfile.username_entry.get()}\n", "data")
-                client.sendto(f"{senderfile.username_entry.get()}".encode("utf-8"), server_address)
+                                f"请求处理：{platform.system()}:{senderfile.username_entry.get()}\n", "data")
+                client.sendto(f"{platform.system()}:{senderfile.username_entry.get()}".encode("utf-8"), server_address)
                 if senderfile.license_radio.get() == "udp":
                     filename = client.recvfrom(56320)[0]
                 else:
@@ -503,8 +546,9 @@ class loggerOS:
 
 async def check(progressbar, address, socket_, type_="normal"):
     index = -1
+    count = 0
     if senderfile.scanning_radio.get():
-        senderfile.account_listbox.delete(0, tk.END)
+        senderfile.account_treeview.delete(*senderfile.account_treeview.get_children())
     progressbar['maximum'] = len(address)
     senderfile.progress.place(x=450, y=80)
     if len(address) > 1:
@@ -533,7 +577,8 @@ async def check(progressbar, address, socket_, type_="normal"):
                     if not senderfile.scanning_radio.get() or type_ == "send":
                         break
                     else:
-                        senderfile.account_listbox.insert(tk.END, f"{address[i]} - {r}")
+                        count += 1
+                        senderfile.account_treeview.insert('', tk.END, values=[str(count), address[i][0], address[i][1], r.split(":")[0], r.split(":")[-1]])
             except:
                 pass
         else:
@@ -660,7 +705,7 @@ class senderfile(tk.Tk):
         self.function = function()
         self.ip = socket.gethostbyname(socket.gethostname())
         self.tk.call('tk', 'scaling', 1.3)
-        self.geometry("700x550+300+100")
+        self.geometry("700x550+100+100")
         self.title(f"SenDerFile -V {__version__} -F {os.getcwd()}")
 
         # 选项卡
@@ -673,12 +718,15 @@ class senderfile(tk.Tk):
         self.network_notebook = ttk.Notebook(self.network_frame)
         self.bugger_frame = tk.Frame(self.network_notebook)
         self.other_frame = tk.Frame(self.network_notebook)
+        self.update_log_frame = tk.Frame(self.network_notebook)
         self.notebook.add(self.send_frame, text="发送")
         self.notebook.add(self.accept_frame, text="接受")
         self.notebook.add(self.prime_frame, text="验证")
+
         self.notebook.add(self.network_frame, text="网络相关")
         self.network_notebook.add(self.bugger_frame, text="Bug反馈")
-        self.network_notebook.add(self.other_frame, text="其他")
+        self.network_notebook.add(self.other_frame, text="告示")
+        self.network_notebook.add(self.update_log_frame, text="更新日志")
         # 其他
         tk.Label(self.other_frame, text="公告：").pack()
         if system != "linux":
@@ -719,15 +767,15 @@ class senderfile(tk.Tk):
         self.agreed = Scrolledtext.ScrolledText(self.prime_frame, height=10)
         self.agreed.pack(fill=tk.BOTH)
         self.agreed.tag_configure("title", font=("微软雅黑", 15, "bold"))
-        self.agreed.tag_configure("booker", font=("宋体", 10))
+        self.agreed.tag_configure("BOOKER", font=("宋体", 10))
         self.agreed.insert(tk.END, "《SenDerFile用户知情书》\n", "title")
-        self.agreed.insert(tk.END, booker, "booker")
+        self.agreed.insert(tk.END, BOOKER, "BOOKER")
         self.agreed.config(state=tk.DISABLED)
         self.gqsyh_label = tk.Label(self.prime_frame, text="正确用户校验特征识别代码设置", font=("微软雅黑", 20, "bold"))
         self.gqsyh_label.pack()
         ToolTip(self.gqsyh_label, msg="当接受到发送信息时的校验身份的工具\n"
                                       "主要用途是：\n"
-                                      "1、在同频段下的IP扫描的身份验证，-\n"
+                                      "1、在同频段下的IP扫描的身份验证，\n"
                                       " 防止优先IP被访问；防止传输对象错误")
         # 用户名设置
         self.username_entry = tk.Entry(self.prime_frame, width=40, font=("微软雅黑", 9, "bold"))
@@ -952,16 +1000,14 @@ class senderfile(tk.Tk):
             self.ver_send_button.place(x=590, y=60)
         # 加载身份验证器
         self.Scrollbar = ttk.Scrollbar(self.send_frame)
-        if system != "linux":
-            self.account_listbox = tk.Listbox(self.send_frame, width=43, height=25, yscrollcommand=self.Scrollbar.set)
-        else:
-            self.account_listbox = tk.Listbox(self.send_frame, width=38, height=20, yscrollcommand=self.Scrollbar.set)
-        self.title_account_label = tk.Label(
-            self.send_frame,
-            text="查找到的身份列表",
-            font=("微软雅黑", 15, "bold"))
-        self.account_listbox.bind(
-            "<<ListboxSelect>>",
+
+        columns = {"ID": 27, "IP端": 100, "端口": 51, "设备系统": 81, "计算机名称": 240}
+        self.account_treeview = ttk.Treeview(self.send_frame, show="headings", columns=list(columns), selectmode=tk.BROWSE)
+        for text, width in columns.items():  # 批量设置列属性
+            self.account_treeview.heading(text, text=text, anchor='center')
+            self.account_treeview.column(text, anchor='center', width=width, stretch=False)
+        self.account_treeview.bind(
+            "<<TreeviewSelect>>",
             lambda event: self.finish_check()
         )
         self.log_text.insert(2.0, "[INIT] 初始化完成\n", "init")
@@ -976,9 +1022,33 @@ class senderfile(tk.Tk):
         self.bind("<Control-t>", lambda event: self.license_radio.set("tcp"))
         self.bind("<Control-s>", lambda event: function.select_file(self.filename_entry))
         self.bind("<Control-l>", lambda event: client.listen())
+        self.bind("<Shift-Return>", self.key_send)
+
+        # 更新日志
+        self.update_log_text = Scrolledtext.ScrolledText(self.update_log_frame, font=("微软雅黑", 10, "bold"))
+        self.update_log_text.pack(fill=tk.BOTH, expand=True)
+        self.update_log_text.insert(tk.END, UPDATE_LOG)
 
         self.notebook.pack(fill=tk.BOTH, expand=True)
         self.network_notebook.pack(fill=tk.BOTH, expand=True)
+
+    def key_send(self, event):
+        if self.verify_radio.get():
+            server.send(
+                self.filename_entry.get(),
+                self.progressbar,
+                self.broker_radio,
+                self.port_entry.get(),
+                "send"
+            )
+        else:
+            server.send(
+                self.filename_entry.get(),
+                self.progressbar,
+                self.broker_radio,
+                self.port_entry.get(),
+                "normal"
+            )
 
     def key_up(self, event):
         if self.broker_radio.get() == "LOCAL":
@@ -1009,15 +1079,11 @@ class senderfile(tk.Tk):
         self.notebook.select(self.notebook_count)
 
     def finish_check(self):
-        user = '-'.join(str(
-            self.account_listbox.get(self.account_listbox.curselection())
-        ).replace(" ", "").split("-")[1:])
-        ip = ''.join(str(
-            self.account_listbox.get(self.account_listbox.curselection())
-        ).replace(" ", "").split("-")[0])
+        id = self.account_treeview.selection()[0]
+        values = self.account_treeview.item(id)['values']
         self.ver_user_entry.config(state=tk.NORMAL)
         self.ver_user_entry.delete(0, tk.END)
-        self.ver_user_entry.insert(0, f"{str(ip)};{str(user)}")
+        self.ver_user_entry.insert(0, f"('{values[1]}', {values[2]});{values[-1]}")
         self.ver_user_entry.config(state=tk.DISABLED)
         self.ver_send_button.config(state=tk.NORMAL)
 
@@ -1025,21 +1091,24 @@ class senderfile(tk.Tk):
         if type_ == "disappear":
             self.scanning_frame.place_forget()
             self.geometry("700x550")
-            self.account_listbox.place_forget()
-            self.title_account_label.place_forget()
+            self.account_treeview.place_forget()
             self.Scrollbar.pack_forget()
-            self.send_button.config(text="传输")
+            self.send_button.config(text="传输", command=lambda: server.send(self.filename_entry.get(),
+                                              self.progressbar,
+                                              self.broker_radio,
+                                              self.port_entry.get(),
+                                              "normal")
+                                    )
         else:
             self.scanning_frame.place(x=5, y=375)
-            self.geometry("1020x550")
+            self.geometry("1200x550")
             self.send_button.config(text="检索", command=lambda: server.send(self.filename_entry.get(),
                                               self.progressbar,
                                               self.broker_radio,
                                               self.port_entry.get(),
-                                              "normal"),
+                                              "normal")
                                     )
-            self.account_listbox.place(x=670, y=50)
-            self.title_account_label.place(x=750, y=0)
+            self.account_treeview.place(x=670, y=15, height=500)
             self.Scrollbar.pack(fill=tk.BOTH, side=tk.RIGHT)
 
 
