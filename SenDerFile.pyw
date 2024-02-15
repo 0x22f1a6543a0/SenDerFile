@@ -27,6 +27,7 @@ import asyncio
 # 系统库
 import platform
 import os
+import signal
 
 # Bug 反馈需要的库
 import smtplib
@@ -43,7 +44,7 @@ elif "lin" in str(platform.system()).lower():
     system = "linux"
 else:
     system = "windows"
-__version__ = "2.4.8"
+__version__ = "2.5.0"
 
 
 # 查看更新
@@ -152,8 +153,20 @@ THIRD. Procedural Information
 2. Open source address of this program: https://github.com/0x22f1a6543a0/SenDerFile
 """
 
-UPDATE_LOG = """
-----------------------------------------
+UPDATE_LOG = """----------------------------------------
+[ 2.5.0 ]
+
+1、 修复BUG
+2、 更新UI
+    · 表格新增‘标识’
+    · 表格距离调整
+3、 增大单次传输字节
+    · 54200 -> 65500
+4、 新增枚举端口
+    · ‘*’表示枚举模式
+5、 新增保存路径
+
+---------------------------------------
 
 [ 2.4.8 ]
 
@@ -269,25 +282,36 @@ class server:
         else:
             ip = senderfile.public_entry.get()
         if type_ == "send":
-            ip = senderfile.ver_user_entry.get().split(";")[0].replace("'", "")
-            ip = ip.replace(")", "").replace("(", "")
-            client_addresses = [(str(ip.split(",")[0]), int(ip.split(",")[-1]))]
+            ip = senderfile.ver_user_entry.get().split(";")
+            client_addresses = [(str(ip[0]), int(ip[-1]))]
         else:
             client_addresses = []
-            # 传输初始化
             port = port.split(";")
-            for p in port:
-                try:
-                    int(p)
-                except:
-                    msg.showwarning("嗯？", f"{p}不是纯数字，有内鬼终止交易")
-                    return None
+            # 传输初始化
+            if ''.join(port) != "*":
+                for p in port:
+                    try:
+                        int(p)
+                    except:
+                        msg.showwarning("嗯？", f"{p}不是纯数字，有内鬼终止交易")
+                        return None
+            else:
+                port.remove(*port)
+                for i in range(1, 65536):
+                    port.append(i)
             # 判断是什么类型
             if broker.get() == "LAN":
                 if senderfile.license_radio.get() == "udp":
                     if not senderfile.scanning_radio.get():
-                        msg.showinfo("哎嘿", f"你选择是局域网传输模式，"
-                            f"在该模式下需要先进行地址查询；该行为需要消耗最大{float(senderfile.timeout_entry.get())*255/60 + 1}分钟")
+                        if senderfile.port_entry.get() == "*":
+                            msg.showinfo("哎嘿",
+                                f"枚举端口+局域网传输模式预计需要"
+                                f"{float(senderfile.timeout_entry.get()) * 255 / 60 * 65536}分"
+                                f""
+                            )
+                        else:
+                            msg.showinfo("哎嘿", f"你选择是局域网传输模式，"
+                                f"在该模式下需要先进行地址查询；该行为需要消耗最大{float(senderfile.timeout_entry.get()) * 255 / 60 + 1}分钟")
                     for p in port:
                         for i in range(255):
                             client_addresses.append((ip.replace("*", str(i)), int(p)))
@@ -295,14 +319,27 @@ class server:
                     msg.showwarning("警告", "你选择的是TCP传输协议，该协议无法启用局域网传输，请使用直接IP访问！")
                     return
             elif broker.get() == "LOCAL":
-                client_addresses = [("127.0.0.1", int(port))]
+                if senderfile.port_entry.get() == "*":
+                    msg.showinfo("哎嘿",
+                                 f"枚举端口预计需要"
+                                 f"{float(senderfile.timeout_entry.get()) * 65536}分"
+                                 f""
+                                 )
+                for p in port:
+                    client_addresses = [("127.0.0.1", int(p))]
             else:
+                if senderfile.port_entry.get() == "*":
+                    msg.showinfo("哎嘿",
+                                 f"枚举端口预计需要"
+                                 f"{float(senderfile.timeout_entry.get()) * 65536}分"
+                                 f""
+                    )
                 for p in port:
                     client_addresses.append((ip, int(p)))
 
         def sendto(client_addresses, progressbar, path, server, type_):
             index = 0
-            if type_ != "send":
+            if type_ != "send" and senderfile.broker_radio.get() == "LAN":
                 asyncio.set_event_loop(asyncio.new_event_loop())
                 loop = asyncio.get_event_loop()
                 check_task = loop.create_task(check(progressbar, client_addresses, server, type_))
@@ -360,7 +397,10 @@ class server:
                     size = os.stat(path).st_size
                     # 文件初始化
                     filepath, shortname, extension = function.get_file(path)
-                    data = bytes(str(shortname) + str(extension), encoding="utf-8")
+                    data = bytes(
+                        str(shortname) + str(extension),
+                        encoding="utf-8"
+                    )
                     if senderfile.license_radio.get() == "udp":
                         server.sendto(data, client_address)
                     else:
@@ -370,8 +410,8 @@ class server:
                     progressbar['maximum'] = size
                     senderfile.progress.place(x=40, y=80)
                     while True:
-                        # 读取文件往后拨56320位
-                        data = f.read(56320)
+                        # 读取文件往后拨65500位
+                        data = f.read(65500)
                         if str(data) != "b''":
                             if senderfile.license_radio.get() == "udp":
                                 server.sendto(data, client_address)
@@ -384,7 +424,7 @@ class server:
                                 server.send(data)
                             break
                         try:
-                            accepted = server.recvfrom(56320)[0].decode()
+                            accepted = server.recvfrom(65500)[0].decode()
                         except:
                             msg.showerror("哎呀",
                                           f"SDF好像在{client_address}迷路了，\n请你重新检查一下门牌号~")
@@ -436,9 +476,9 @@ class client:
                 client, addr = client.accept()
             # 获取文件名
             if senderfile.license_radio.get() == "udp":
-                filename, server_address = client.recvfrom(56320)
+                filename, server_address = client.recvfrom(65500)
             else:
-                filename = client.recv(56320)
+                filename = client.recv(65500)
                 server_address = listen_address
 
             if filename.decode() == "AliveAndScan":
@@ -446,9 +486,9 @@ class client:
                                 f"请求处理：{platform.system()}:{senderfile.username_entry.get()}\n", "data")
                 client.sendto(f"{platform.system()}:{senderfile.username_entry.get()}".encode("utf-8"), server_address)
                 if senderfile.license_radio.get() == "udp":
-                    filename = client.recvfrom(56320)[0]
+                    filename = client.recvfrom(65500)[0]
                 else:
-                    filename = client.recv(56320)
+                    filename = client.recv(65500)
 
             if filename.decode() != "IsAlive":
                 if "sha" in str(filename.decode())[:7] or "md" in str(filename.decode())[:4]:
@@ -456,10 +496,10 @@ class client:
                     ver = True
                     verify = str(filename.decode()).split(":")[0]
                     value = str(filename.decode()).split(":")[-1]
-                    filename = client.recvfrom(56320)[0]
-                    f = open(filename, 'wb')
+                    filename = client.recvfrom(65500)[0]
+                    f = open(f'{senderfile.save_folder_entry.get()}\\{filename.decode()}', 'wb')
                 else:
-                    f = open(filename, 'wb')
+                    f = open(f'{senderfile.save_folder_entry.get()}\\{filename.decode()}', 'wb')
 
             else:
                 senderfile.log_text.insert(tk.END, "[DATA] 收到服务端的存活请求，请求处理：alive\n", "data")
@@ -467,28 +507,28 @@ class client:
                     client.sendto("alive".encode("utf-8"), server_address)
                 else:
                     client.send("alive".encode("utf-8"))
-                filename = client.recvfrom(56320)[0]
-                f = open(filename, 'wb')
+                filename = client.recvfrom(65500)[0]
+                f = open(f'{senderfile.save_folder_entry.get()}\\{filename.decode()}', 'wb')
             # 初始化
             start = time.time()
             count = 0
             while True:
                 try:
                     if senderfile.license_radio.get() == "udp":
-                        data, server_address = client.recvfrom(56320)
+                        data, server_address = client.recvfrom(65500)
                     else:
-                        data = client.recv(56320)
+                        data = client.recv(65500)
                     if str(data) != "b'end'":
                         f.write(data)
                     else:
                         break
                     count += 1
                     if senderfile.license_radio.get() == "udp":
-                        client.sendto(str(count * 56320).encode("utf-8"), server_address)
+                        client.sendto(str(count * 65500).encode("utf-8"), server_address)
                     else:
-                        client.send(str(count * 56320).encode("utf-8"))
+                        client.send(str(count * 65500).encode("utf-8"))
                     senderfile.log_text.insert(tk.END, f"[{time.strftime('%H:%M:%S')}]  "
-                                f"从：{server_address[0]}接收了{count * 56320}字节"
+                                f"从：{server_address[0]}接收了{count * 65500}字节"
                                 f"， 耗时：{str(time.time()-start)[:4]}\n", "sending")
 
                 except:
@@ -501,8 +541,8 @@ class client:
             client.close()
             f.close()
             if ver:
-                vf = open(filename, 'rb')
-                data = open(filename, 'rb').read()
+                vf = open(f'{senderfile.save_folder_entry.get()}\\{filename.decode()}', 'rb')
+                data = open(f'{senderfile.save_folder_entry.get()}\\{filename.decode()}', 'rb').read()
                 if verify == "sha256":
                     now_value = hashlib.sha256(str(vf.read()).encode("utf-8")).hexdigest()
                 elif verify == "sha1":
@@ -525,7 +565,7 @@ class client:
                                                 f"校验hash: {value}\n"
                                                 f"接收hash：{now_value}\n"
                                                 f"请问是否继续？是：不进行操作，否：删除文件"):
-                        open(filename, 'wb').write(data)
+                        open(f'{senderfile.save_folder_entry.get()}\\{filename.decode()}', 'wb').write(data)
                 senderfile.log_text.yview_moveto(True)
                 senderfile.log_text.update()
             return None
@@ -562,7 +602,7 @@ async def check(progressbar, address, socket_, type_="normal"):
                 senderfile.progress.place(x=100, y=80)
                 senderfile.progress.config(
                     text=f"正在尝试{address[i]}，进度："
-                    f"{address.index(address[i])}/{len(address) * len(senderfile.port_entry.get().split(';'))}"
+                    f"{address.index(address[i])}/{len(address) * len(senderfile.port_entry.get().split(';'))}\n"
                 )
                 progressbar['value'] = i
                 if not senderfile.scanning_radio.get():
@@ -578,7 +618,18 @@ async def check(progressbar, address, socket_, type_="normal"):
                         break
                     else:
                         count += 1
-                        senderfile.account_treeview.insert('', tk.END, values=[str(count), address[i][0], address[i][1], r.split(":")[0], r.split(":")[-1]])
+                        senderfile.account_treeview.insert(
+                            '',
+                            tk.END,
+                            values=[
+                                str(count), # ID
+                                address[i][0],  # IP
+                                address[i][1],  # 端口
+                                r.split(":")[0],   # 设备系统
+                                r.split(":")[-1],  # 计算机名称
+                                "本台" if r.split(":")[-1] == socket.gethostname() else "其他"  # 标识
+                            ]
+                        )
             except:
                 pass
         else:
@@ -605,6 +656,11 @@ class function:
     def select_file(entry):
         entry.delete(0, tk.END)
         entry.insert(0, str(filedialog.askopenfilename()))
+
+    @staticmethod
+    def select_folder(entry: tk.Entry):
+        entry.delete(0, tk.END)
+        entry.insert(0, str(filedialog.askdirectory()))
 
     @staticmethod
     def save_as():
@@ -647,8 +703,8 @@ class emali_send:
                 senderfile.progressbar_bug['value'] = i
                 time.sleep(0.03)
             try:
-                server = smtplib.SMTP_SSL("", )
-                server.login("", "")
+                server = smtplib.SMTP_SSL("smtp.qq.com", 465)
+                server.login("e-mail", "SMTP-KEY")
                 # 发送感谢邮件
                 thanks_message = f"""
                 恭喜您成为 <SenDerFile> 贡献者之一！
@@ -661,9 +717,9 @@ class emali_send:
                 """
                 machine_thanks = MIMEText(thanks_message, "plain", "utf-8")
                 machine_thanks['Subject'] = "SenDerFile 开发者感谢邮件"
-                machine_thanks['From'] = ""
+                machine_thanks['From'] = "e-mail"
                 machine_thanks["To"] = ','.join([f"{from_email}"])
-                server.sendmail("",
+                server.sendmail("e-mail",
                                 f"{from_email}",
                                 machine_thanks.as_string())
 
@@ -677,10 +733,10 @@ class emali_send:
                 """
                 machine_bug = MIMEText(message, "plain", "utf-8")
                 machine_bug['Subject'] = "SenDerFile接受到一个bug反馈"
-                machine_bug['From'] = ""
-                machine_bug["To"] = ','.join([""])
-                server.sendmail("",
-                                "",
+                machine_bug['From'] = "e-mail"
+                machine_bug["To"] = ','.join(["e-mail"])
+                server.sendmail("e-mail",
+                                "e-mail",
                                 machine_bug.as_string())
                 server.quit()
                 for i in range(101 - r):
@@ -805,6 +861,15 @@ class senderfile(tk.Tk):
         self.listen_port_entry = tk.Entry(self.accept_frame)
         self.listen_port_entry.insert(1, "9999")
         self.listen_port_entry.place(x=50, y=450)
+        tk.Label(self.accept_frame, text="保存文件夹：").place(x=200, y=400)
+        self.save_folder_entry = tk.Entry(self.accept_frame, width=55)
+        self.save_folder_entry.insert(0, os.getcwd())
+        self.save_folder_entry.place(x=290, y=400)
+        self.save_folder_btn = ttk.Button(self.accept_frame, text="选择文件夹", command=lambda: function.select_folder(self.save_folder_entry))
+        if system == "linux":
+            self.save_folder_btn.place(x=250, y=430)
+        else:
+            self.save_folder_btn.place(x=200, y=420)
         # 按钮
         tk.Button(self.accept_frame, text="监听", fg='green', command=client().listen).place(x=640, y=480)
         tk.Button(self.accept_frame, text="清除日志", fg='orange',
@@ -906,7 +971,8 @@ class senderfile(tk.Tk):
         self.port_label = tk.Label(self.broker_frame, text="端口(0~65535)")
         self.port_label.place(x=10, y=150)
         ToolTip(self.port_label, msg="设置监听端口\n"
-                                     "‘;’表示多端口传输(该模式请查看并发传输说明)")
+                                     "‘;’表示多端口传输(该模式请查看并发传输说明)\n"
+                                     "‘*’表示枚举端口，既0~65535之间")
         self.port_entry = tk.Entry(self.broker_frame)
         self.port_entry.insert(1, "9999")
         self.port_entry.place(x=110, y=150)
@@ -927,10 +993,7 @@ class senderfile(tk.Tk):
                                            variable=self.broker_radio, value="PUBLIC")
         self.public_radio.place(x=10, y=80)
 
-        if system != "linux":
-            self.protocol("WM_DELETE_WINDOW", lambda: os.system(f"taskkill /F /PID {os.getpid()}"))
-        else:
-            self.protocol("WM_DELETE_WINDOW", lambda: os.system(f"kill {os.getpid()}"))
+        self.protocol("WM_DELETE_WINDOW", lambda: os.kill(os.getpid(), signal.SIGTERM))
         # 输入框 -> 传输地址
         # 本地
         self.localhost_entry = tk.Entry(self.broker_frame)
@@ -1001,7 +1064,7 @@ class senderfile(tk.Tk):
         # 加载身份验证器
         self.Scrollbar = ttk.Scrollbar(self.send_frame)
 
-        columns = {"ID": 27, "IP端": 100, "端口": 51, "设备系统": 81, "计算机名称": 240}
+        columns = {"ID": 27, "IP端": 140, "端口": 51, "设备系统": 81, "计算机名称": 200, "标识": 50}
         self.account_treeview = ttk.Treeview(self.send_frame, show="headings", columns=list(columns), selectmode=tk.BROWSE)
         for text, width in columns.items():  # 批量设置列属性
             self.account_treeview.heading(text, text=text, anchor='center')
@@ -1083,7 +1146,7 @@ class senderfile(tk.Tk):
         values = self.account_treeview.item(id)['values']
         self.ver_user_entry.config(state=tk.NORMAL)
         self.ver_user_entry.delete(0, tk.END)
-        self.ver_user_entry.insert(0, f"('{values[1]}', {values[2]});{values[-1]}")
+        self.ver_user_entry.insert(0, f"{values[1]};{values[2]}")
         self.ver_user_entry.config(state=tk.DISABLED)
         self.ver_send_button.config(state=tk.NORMAL)
 
@@ -1101,7 +1164,7 @@ class senderfile(tk.Tk):
                                     )
         else:
             self.scanning_frame.place(x=5, y=375)
-            self.geometry("1200x550")
+            self.geometry("1250x550")
             self.send_button.config(text="检索", command=lambda: server.send(self.filename_entry.get(),
                                               self.progressbar,
                                               self.broker_radio,
